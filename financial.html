@@ -1,0 +1,822 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Fínance — Personal Dashboard</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --border: rgba(255,255,255,0.07);
+    --text: #f0f0f5;
+    --muted: #7a7a9a;
+    --accent: #7c6fcd;
+    --accent2: #5ee7bf;
+    --accent3: #f7c948;
+    --danger: #f06b6b;
+    --income: #5ee7bf;
+    --expense: #f06b6b;
+    --glow: rgba(124,111,205,0.18);
+  }
+  [data-theme="light"] {
+    --bg: #f4f4f8;
+    --surface: #ffffff;
+    --surface2: #eeeef5;
+    --border: rgba(0,0,0,0.08);
+    --text: #0f0f1a;
+    --muted: #7a7a9a;
+    --glow: rgba(124,111,205,0.10);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 15px;
+    min-height: 100vh;
+    transition: background 0.35s, color 0.35s;
+  }
+  /* Background mesh */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse 80% 60% at 70% -10%, rgba(124,111,205,0.12) 0%, transparent 60%),
+                radial-gradient(ellipse 60% 50% at -10% 80%, rgba(94,231,191,0.07) 0%, transparent 60%);
+    pointer-events: none;
+    z-index: 0;
+  }
+  #app { position: relative; z-index: 1; max-width: 480px; margin: 0 auto; padding: 0 0 100px; }
+
+  /* Typography */
+  .font-display { font-family: 'Syne', sans-serif; }
+
+  /* Card */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    transition: background 0.35s, border 0.35s;
+  }
+  .card-inner {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+
+  /* Balance hero */
+  .balance-card {
+    background: linear-gradient(135deg, #1e1b3a 0%, #15152a 100%);
+    border: 1px solid rgba(124,111,205,0.25);
+    border-radius: 24px;
+    padding: 28px 24px 24px;
+    position: relative;
+    overflow: hidden;
+  }
+  [data-theme="light"] .balance-card {
+    background: linear-gradient(135deg, #6c5fcf 0%, #8b7de8 100%);
+    border-color: rgba(255,255,255,0.2);
+  }
+  .balance-card::after {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 180px; height: 180px;
+    border-radius: 50%;
+    background: rgba(124,111,205,0.15);
+    pointer-events: none;
+  }
+  .balance-card::before {
+    content: '';
+    position: absolute;
+    bottom: -30px; left: 40px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(94,231,191,0.07);
+    pointer-events: none;
+  }
+
+  /* Stat pills */
+  .stat-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    flex: 1;
+    transition: background 0.35s;
+  }
+
+  /* Form inputs */
+  .fin-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: var(--text);
+    padding: 12px 14px;
+    width: 100%;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    outline: none;
+    transition: border 0.2s, box-shadow 0.2s;
+    appearance: none;
+  }
+  .fin-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,111,205,0.15); }
+  .fin-input option { background: #1c1c28; color: #f0f0f5; }
+  [data-theme="light"] .fin-input option { background: #fff; color: #0f0f1a; }
+
+  /* Buttons */
+  .btn-primary {
+    background: linear-gradient(135deg, #7c6fcd, #6357b8);
+    color: #fff;
+    border: none;
+    border-radius: 14px;
+    padding: 13px 22px;
+    font-family: 'Syne', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.2s, opacity 0.2s;
+    box-shadow: 0 4px 20px rgba(124,111,205,0.35);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(124,111,205,0.5); }
+  .btn-primary:active { transform: translateY(0); }
+  .btn-delete {
+    background: rgba(240,107,107,0.1);
+    color: var(--danger);
+    border: 1px solid rgba(240,107,107,0.2);
+    border-radius: 10px;
+    padding: 5px 10px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: background 0.2s;
+    display: flex; align-items: center; gap: 4px;
+  }
+  .btn-delete:hover { background: rgba(240,107,107,0.2); }
+
+  /* Transaction list */
+  .tx-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp 0.3s ease both;
+  }
+  .tx-item:last-child { border-bottom: none; }
+  .tx-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+
+  /* Nav */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 100%; max-width: 480px;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    display: flex;
+    z-index: 50;
+    transition: background 0.35s;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center;
+    gap: 4px; padding: 12px 8px;
+    color: var(--muted); background: none; border: none; cursor: pointer;
+    font-family: 'DM Sans', sans-serif; font-size: 11px;
+    transition: color 0.2s;
+  }
+  .nav-btn.active { color: var(--accent); }
+
+  /* Tabs */
+  .tab-section { display: none; }
+  .tab-section.active { display: block; }
+
+  /* Theme toggle */
+  .theme-toggle {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    width: 36px; height: 36px;
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; color: var(--muted);
+    transition: background 0.2s, color 0.2s;
+  }
+  .theme-toggle:hover { color: var(--accent); }
+
+  /* Badge */
+  .badge {
+    display: inline-flex; align-items: center;
+    padding: 3px 9px; border-radius: 20px;
+    font-size: 11px; font-weight: 500;
+  }
+
+  /* Chart wrapper */
+  .chart-wrap { position: relative; max-width: 220px; margin: 0 auto; }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  .number-anim { transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1); }
+
+  /* Empty state */
+  .empty-state {
+    text-align: center; padding: 40px 20px;
+    color: var(--muted);
+  }
+
+  /* Label */
+  label { font-size: 12px; color: var(--muted); font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; display: block; margin-bottom: 6px; }
+
+  /* Toast */
+  .toast {
+    position: fixed; top: 20px; left: 50%; transform: translateX(-50%) translateY(-80px);
+    background: var(--accent); color: #fff;
+    padding: 10px 20px; border-radius: 50px;
+    font-size: 13px; font-weight: 500; font-family: 'DM Sans', sans-serif;
+    z-index: 999; transition: transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Segment control for type */
+  .seg-ctrl { display: flex; background: var(--surface2); border-radius: 12px; padding: 4px; gap: 4px; border: 1px solid var(--border); }
+  .seg-btn { flex: 1; padding: 8px; border-radius: 9px; border: none; background: transparent; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--muted); transition: all 0.2s; }
+  .seg-btn.active { background: var(--surface); color: var(--text); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .seg-btn.active.income { color: var(--income); }
+  .seg-btn.active.expense { color: var(--expense); }
+
+  /* Progress bar */
+  .progress-bar { height: 5px; border-radius: 5px; background: var(--surface2); overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 5px; transition: width 0.6s ease; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Header -->
+  <div class="flex items-center justify-between px-5 pt-10 pb-4">
+    <div>
+      <div class="font-display font-800 text-xl" style="color:var(--text)">Fínance</div>
+      <div style="color:var(--muted); font-size:12px">Personal Dashboard</div>
+    </div>
+    <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">
+      <i data-lucide="sun" style="width:16px;height:16px"></i>
+    </button>
+  </div>
+
+  <!-- ═══ OVERVIEW TAB ═══ -->
+  <div id="tab-overview" class="tab-section active px-5">
+
+    <!-- Balance Hero -->
+    <div class="balance-card mb-4">
+      <div style="font-size:11px;font-weight:500;letter-spacing:0.1em;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:6px">Total Balance</div>
+      <div class="font-display" style="font-size:42px;font-weight:800;color:#fff;line-height:1;margin-bottom:4px" id="hero-balance">ETB 0.00</div>
+      <div style="font-size:12px;color:rgba(255,255,255,0.4)" id="hero-subtitle">No transactions yet</div>
+      <div style="position:absolute;bottom:20px;right:24px;display:flex;flex-direction:column;align-items:flex-end;gap:3px">
+        <div style="font-size:11px;color:rgba(255,255,255,0.35);text-transform:uppercase;letter-spacing:0.08em">this month</div>
+        <div style="font-size:14px;font-weight:600;color:rgba(255,255,255,0.7)" id="tx-count-badge">0 transactions</div>
+      </div>
+    </div>
+
+    <!-- Stats Row -->
+    <div class="flex gap-3 mb-4">
+      <div class="stat-pill">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <div style="width:26px;height:26px;border-radius:8px;background:rgba(94,231,191,0.12);display:flex;align-items:center;justify-content:center">
+            <i data-lucide="trending-up" style="width:13px;height:13px;color:#5ee7bf"></i>
+          </div>
+          <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Income</span>
+        </div>
+        <div class="font-display number-anim" style="font-size:18px;font-weight:700;color:#5ee7bf" id="stat-income">0.00</div>
+      </div>
+      <div class="stat-pill">
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:6px">
+          <div style="width:26px;height:26px;border-radius:8px;background:rgba(240,107,107,0.12);display:flex;align-items:center;justify-content:center">
+            <i data-lucide="trending-down" style="width:13px;height:13px;color:#f06b6b"></i>
+          </div>
+          <span style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em">Expenses</span>
+        </div>
+        <div class="font-display number-anim" style="font-size:18px;font-weight:700;color:#f06b6b" id="stat-expense">0.00</div>
+      </div>
+    </div>
+
+    <!-- Chart Card -->
+    <div class="card p-5 mb-4">
+      <div class="flex items-center justify-between mb-4">
+        <div class="font-display font-700" style="font-size:15px">Spending Breakdown</div>
+        <div style="font-size:11px;color:var(--muted);background:var(--surface2);padding:4px 10px;border-radius:20px;border:1px solid var(--border)">This Month</div>
+      </div>
+      <div class="chart-wrap mb-4">
+        <canvas id="doughnutChart" width="220" height="220"></canvas>
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none">
+          <div style="font-size:11px;color:var(--muted)">Total</div>
+          <div class="font-display" style="font-size:17px;font-weight:700;color:var(--text)" id="chart-center-val">—</div>
+        </div>
+      </div>
+      <div id="chart-legend" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center"></div>
+    </div>
+
+    <!-- Recent Transactions -->
+    <div class="card p-5">
+      <div class="flex items-center justify-between mb-3">
+        <div class="font-display font-700" style="font-size:15px">Recent</div>
+        <button onclick="showTab('transactions')" style="font-size:12px;color:var(--accent);background:none;border:none;cursor:pointer;font-family:'DM Sans',sans-serif">See all →</button>
+      </div>
+      <div id="recent-list"><div class="empty-state"><i data-lucide="inbox" style="width:32px;height:32px;margin:0 auto 8px;display:block;opacity:0.3"></i><div>No transactions yet</div></div></div>
+    </div>
+  </div>
+
+  <!-- ═══ ADD TAB ═══ -->
+  <div id="tab-add" class="tab-section px-5">
+    <div class="font-display font-700 mb-5" style="font-size:20px">Add Transaction</div>
+
+    <div class="card p-5">
+      <!-- Type toggle -->
+      <div style="margin-bottom:18px">
+        <label>Type</label>
+        <div class="seg-ctrl">
+          <button class="seg-btn active income" id="type-income" onclick="setType('income')">
+            <span>↑ Income</span>
+          </button>
+          <button class="seg-btn expense" id="type-expense" onclick="setType('expense')">
+            <span>↓ Expense</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Amount -->
+      <div style="margin-bottom:14px">
+        <label>Amount (ETB)</label>
+        <input type="number" id="f-amount" class="fin-input" placeholder="0.00" min="0" step="0.01"/>
+      </div>
+
+      <!-- Description -->
+      <div style="margin-bottom:14px">
+        <label>Description</label>
+        <input type="text" id="f-desc" class="fin-input" placeholder="e.g. Lunch at restaurant"/>
+      </div>
+
+      <!-- Category -->
+      <div style="margin-bottom:14px">
+        <label>Category</label>
+        <select id="f-category" class="fin-input">
+          <option value="">— Select Category —</option>
+          <optgroup label="Income">
+            <option value="Salary">💼 Salary</option>
+            <option value="Business">🏪 Business</option>
+            <option value="Freelance">💻 Freelance</option>
+            <option value="Investment">📈 Investment</option>
+            <option value="Other Income">🎁 Other Income</option>
+          </optgroup>
+          <optgroup label="Expenses">
+            <option value="Food">🍽️ Food & Dining</option>
+            <option value="Rent">🏠 Rent / Housing</option>
+            <option value="Transport">🚌 Transport</option>
+            <option value="Health">💊 Health</option>
+            <option value="Education">📚 Education</option>
+            <option value="Entertainment">🎬 Entertainment</option>
+            <option value="Shopping">🛍️ Shopping</option>
+            <option value="Utilities">💡 Utilities</option>
+            <option value="Other">📦 Other</option>
+          </optgroup>
+        </select>
+      </div>
+
+      <!-- Date -->
+      <div style="margin-bottom:20px">
+        <label>Date</label>
+        <input type="date" id="f-date" class="fin-input"/>
+      </div>
+
+      <button class="btn-primary w-full" onclick="addTransaction()" style="width:100%">
+        <span style="display:flex;align-items:center;justify-content:center;gap:8px">
+          <i data-lucide="plus-circle" style="width:16px;height:16px"></i>
+          Add Transaction
+        </span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ═══ TRANSACTIONS TAB ═══ -->
+  <div id="tab-transactions" class="tab-section px-5">
+    <div class="flex items-center justify-between mb-5">
+      <div class="font-display font-700" style="font-size:20px">All Transactions</div>
+      <button onclick="clearAll()" style="font-size:11px;color:var(--danger);background:rgba(240,107,107,0.08);border:1px solid rgba(240,107,107,0.15);border-radius:20px;padding:5px 12px;cursor:pointer;font-family:'DM Sans',sans-serif">Clear All</button>
+    </div>
+
+    <!-- Filter -->
+    <div style="display:flex;gap:8px;margin-bottom:16px;overflow-x:auto;padding-bottom:4px">
+      <button class="filter-btn active" data-filter="all" onclick="filterTx(this,'all')" style="white-space:nowrap;padding:7px 14px;border-radius:20px;border:1px solid var(--accent);background:rgba(124,111,205,0.12);color:var(--accent);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">All</button>
+      <button class="filter-btn" data-filter="income" onclick="filterTx(this,'income')" style="white-space:nowrap;padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">Income</button>
+      <button class="filter-btn" data-filter="expense" onclick="filterTx(this,'expense')" style="white-space:nowrap;padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-size:12px;cursor:pointer;font-family:'DM Sans',sans-serif">Expenses</button>
+    </div>
+
+    <div id="all-tx-list"></div>
+  </div>
+
+  <!-- ═══ INSIGHTS TAB ═══ -->
+  <div id="tab-insights" class="tab-section px-5">
+    <div class="font-display font-700 mb-5" style="font-size:20px">Insights</div>
+
+    <!-- Savings rate -->
+    <div class="card p-5 mb-4">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div class="font-display font-700" style="font-size:14px">Savings Rate</div>
+        <div class="font-display" style="font-size:24px;font-weight:800;color:var(--accent2)" id="savings-rate">—</div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="savings-bar" style="width:0%;background:linear-gradient(90deg,#5ee7bf,#4fcaa7)"></div>
+      </div>
+      <div style="font-size:11px;color:var(--muted);margin-top:8px">Percentage of income saved this month</div>
+    </div>
+
+    <!-- Top Expense Categories -->
+    <div class="card p-5 mb-4">
+      <div class="font-display font-700 mb-4" style="font-size:14px">Top Expense Categories</div>
+      <div id="top-categories"></div>
+    </div>
+
+    <!-- Tx summary stats -->
+    <div class="card p-5">
+      <div class="font-display font-700 mb-4" style="font-size:14px">Summary Stats</div>
+      <div id="summary-stats" style="display:flex;flex-direction:column;gap:10px"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Bottom Nav -->
+<nav class="bottom-nav">
+  <button class="nav-btn active" id="nav-overview" onclick="showTab('overview')">
+    <i data-lucide="layout-dashboard" style="width:20px;height:20px"></i>
+    <span>Overview</span>
+  </button>
+  <button class="nav-btn" id="nav-add" onclick="showTab('add')">
+    <i data-lucide="plus-circle" style="width:20px;height:20px"></i>
+    <span>Add</span>
+  </button>
+  <button class="nav-btn" id="nav-transactions" onclick="showTab('transactions')">
+    <i data-lucide="list" style="width:20px;height:20px"></i>
+    <span>History</span>
+  </button>
+  <button class="nav-btn" id="nav-insights" onclick="showTab('insights')">
+    <i data-lucide="bar-chart-2" style="width:20px;height:20px"></i>
+    <span>Insights</span>
+  </button>
+</nav>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────────
+let txType = 'income';
+let filterMode = 'all';
+let chart = null;
+
+function load() { return JSON.parse(localStorage.getItem('fin_txs') || '[]'); }
+function save(txs) { localStorage.setItem('fin_txs', JSON.stringify(txs)); }
+
+// ─── THEME ───────────────────────────────────────────────────
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  html.setAttribute('data-theme', isDark ? 'light' : 'dark');
+  localStorage.setItem('fin_theme', isDark ? 'light' : 'dark');
+  document.getElementById('themeBtn').innerHTML = isDark
+    ? '<i data-lucide="moon" style="width:16px;height:16px"></i>'
+    : '<i data-lucide="sun" style="width:16px;height:16px"></i>';
+  lucide.createIcons();
+  renderChart();
+}
+
+// ─── TABS ─────────────────────────────────────────────────────
+function showTab(name) {
+  ['overview','add','transactions','insights'].forEach(t => {
+    document.getElementById('tab-'+t).classList.toggle('active', t === name);
+    document.getElementById('nav-'+t).classList.toggle('active', t === name);
+  });
+  if (name === 'overview') renderAll();
+  if (name === 'transactions') renderAllTx();
+  if (name === 'insights') renderInsights();
+  lucide.createIcons();
+}
+
+// ─── TYPE TOGGLE ─────────────────────────────────────────────
+function setType(t) {
+  txType = t;
+  document.getElementById('type-income').classList.toggle('active', t === 'income');
+  document.getElementById('type-income').classList.toggle('income', t === 'income');
+  document.getElementById('type-expense').classList.toggle('active', t === 'expense');
+  document.getElementById('type-expense').classList.toggle('expense', t === 'expense');
+}
+
+// ─── ADD TRANSACTION ─────────────────────────────────────────
+function addTransaction() {
+  const amount = parseFloat(document.getElementById('f-amount').value);
+  const desc = document.getElementById('f-desc').value.trim();
+  const category = document.getElementById('f-category').value;
+  const date = document.getElementById('f-date').value;
+
+  if (!amount || amount <= 0) { showToast('Enter a valid amount'); return; }
+  if (!category) { showToast('Please select a category'); return; }
+  if (!date) { showToast('Please select a date'); return; }
+
+  const txs = load();
+  txs.unshift({ id: Date.now(), type: txType, amount, desc: desc || category, category, date });
+  save(txs);
+
+  document.getElementById('f-amount').value = '';
+  document.getElementById('f-desc').value = '';
+  document.getElementById('f-category').value = '';
+
+  showToast('Transaction added ✓');
+  renderAll();
+}
+
+// ─── DELETE ───────────────────────────────────────────────────
+function deleteTx(id) {
+  save(load().filter(t => t.id !== id));
+  renderAll();
+  renderAllTx();
+  renderInsights();
+  showToast('Deleted');
+}
+
+function clearAll() {
+  if (!confirm('Clear all transactions?')) return;
+  save([]);
+  renderAll();
+  renderAllTx();
+  renderInsights();
+  showToast('All cleared');
+}
+
+// ─── FILTER ──────────────────────────────────────────────────
+function filterTx(btn, mode) {
+  filterMode = mode;
+  document.querySelectorAll('.filter-btn').forEach(b => {
+    const active = b === btn;
+    b.style.borderColor = active ? 'var(--accent)' : 'var(--border)';
+    b.style.background = active ? 'rgba(124,111,205,0.12)' : 'transparent';
+    b.style.color = active ? 'var(--accent)' : 'var(--muted)';
+  });
+  renderAllTx();
+}
+
+// ─── CATEGORY META ────────────────────────────────────────────
+const catMeta = {
+  'Salary':       { icon:'💼', color:'#5ee7bf' },
+  'Business':     { icon:'🏪', color:'#7c6fcd' },
+  'Freelance':    { icon:'💻', color:'#a78bfa' },
+  'Investment':   { icon:'📈', color:'#34d399' },
+  'Other Income': { icon:'🎁', color:'#6ee7b7' },
+  'Food':         { icon:'🍽️', color:'#f97316' },
+  'Rent':         { icon:'🏠', color:'#f59e0b' },
+  'Transport':    { icon:'🚌', color:'#3b82f6' },
+  'Health':       { icon:'💊', color:'#ef4444' },
+  'Education':    { icon:'📚', color:'#8b5cf6' },
+  'Entertainment':{ icon:'🎬', color:'#ec4899' },
+  'Shopping':     { icon:'🛍️', color:'#f43f5e' },
+  'Utilities':    { icon:'💡', color:'#eab308' },
+  'Other':        { icon:'📦', color:'#94a3b8' },
+};
+function getCat(c) { return catMeta[c] || { icon:'💳', color:'#7c6fcd' }; }
+
+// ─── RENDER HELPERS ───────────────────────────────────────────
+function fmt(n) { return 'ETB ' + n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtShort(n) { return n.toLocaleString('en-US', {minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmtDate(d) {
+  const dt = new Date(d + 'T00:00:00');
+  return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});
+}
+
+function txHTML(tx) {
+  const m = getCat(tx.category);
+  const sign = tx.type === 'income' ? '+' : '-';
+  const col = tx.type === 'income' ? '#5ee7bf' : '#f06b6b';
+  return `
+    <div class="tx-item">
+      <div class="tx-icon" style="background:${m.color}18;font-size:18px">${m.icon}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${tx.desc}</div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">${tx.category} · ${fmtDate(tx.date)}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:5px">
+        <div class="font-display" style="font-weight:700;font-size:14px;color:${col}">${sign}${fmtShort(tx.amount)}</div>
+        <button class="btn-delete" onclick="deleteTx(${tx.id})">
+          <i data-lucide="trash-2" style="width:10px;height:10px"></i>
+        </button>
+      </div>
+    </div>`;
+}
+
+// ─── RENDER ALL ───────────────────────────────────────────────
+function renderAll() {
+  const txs = load();
+  const income = txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
+  const expense = txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+  const balance = income - expense;
+
+  document.getElementById('hero-balance').textContent = fmt(balance);
+  document.getElementById('hero-subtitle').textContent = balance >= 0 ? '↑ Positive balance' : '↓ Negative balance';
+  document.getElementById('hero-balance').style.color = balance < 0 ? '#f06b6b' : '#ffffff';
+  document.getElementById('stat-income').textContent = fmtShort(income);
+  document.getElementById('stat-expense').textContent = fmtShort(expense);
+  document.getElementById('tx-count-badge').textContent = txs.length + ' transaction' + (txs.length!==1?'s':'');
+
+  // Recent (last 5)
+  const recentEl = document.getElementById('recent-list');
+  if (!txs.length) {
+    recentEl.innerHTML = `<div class="empty-state"><i data-lucide="inbox" style="width:32px;height:32px;margin:0 auto 8px;display:block;opacity:0.3"></i><div>No transactions yet</div><div style="font-size:12px;margin-top:4px">Tap + Add to get started</div></div>`;
+  } else {
+    recentEl.innerHTML = txs.slice(0,5).map(txHTML).join('');
+  }
+
+  renderChart();
+  lucide.createIcons();
+}
+
+// ─── CHART ────────────────────────────────────────────────────
+function renderChart() {
+  const txs = load().filter(t=>t.type==='expense');
+  const bycat = {};
+  txs.forEach(t => { bycat[t.category] = (bycat[t.category]||0) + t.amount; });
+  const cats = Object.keys(bycat);
+  const vals = cats.map(c=>bycat[c]);
+  const total = vals.reduce((a,b)=>a+b,0);
+
+  document.getElementById('chart-center-val').textContent = total > 0 ? fmtShort(total) : '—';
+
+  const colors = cats.map(c => getCat(c).color);
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+  if (chart) { chart.destroy(); chart = null; }
+
+  const ctx = document.getElementById('doughnutChart').getContext('2d');
+  if (!cats.length) {
+    ctx.clearRect(0, 0, 220, 220);
+    // Draw placeholder ring
+    ctx.beginPath();
+    ctx.arc(110,110,80,0,Math.PI*2);
+    ctx.strokeStyle = isDark ? 'rgba(255,255,255,0.05)' : 'rgba(0,0,0,0.06)';
+    ctx.lineWidth = 28;
+    ctx.stroke();
+    document.getElementById('chart-legend').innerHTML = `<div style="font-size:12px;color:var(--muted)">No expense data yet</div>`;
+    return;
+  }
+
+  chart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels: cats, datasets: [{ data: vals, backgroundColor: colors, borderColor: isDark ? '#13131a' : '#ffffff', borderWidth: 3, hoverOffset: 6 }] },
+    options: {
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: {
+        backgroundColor: isDark ? '#1c1c28' : '#fff',
+        titleColor: isDark ? '#f0f0f5' : '#0f0f1a',
+        bodyColor: isDark ? '#7a7a9a' : '#7a7a9a',
+        borderColor: isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.08)',
+        borderWidth: 1,
+        padding: 10,
+        callbacks: { label: ctx => ` ${fmt(ctx.raw)} (${((ctx.raw/total)*100).toFixed(1)}%)` }
+      }},
+      animation: { animateRotate: true, duration: 600 }
+    }
+  });
+
+  // Legend
+  document.getElementById('chart-legend').innerHTML = cats.map((c,i) => {
+    const pct = ((vals[i]/total)*100).toFixed(0);
+    return `<div style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)">
+      <div style="width:8px;height:8px;border-radius:50%;background:${colors[i]};flex-shrink:0"></div>
+      <span>${c}</span><span style="color:var(--text);font-weight:600">${pct}%</span>
+    </div>`;
+  }).join('');
+}
+
+// ─── ALL TX ───────────────────────────────────────────────────
+function renderAllTx() {
+  const all = load();
+  const filtered = filterMode === 'all' ? all : all.filter(t=>t.type===filterMode);
+  const el = document.getElementById('all-tx-list');
+  if (!filtered.length) {
+    el.innerHTML = `<div class="empty-state"><i data-lucide="inbox" style="width:32px;height:32px;margin:0 auto 8px;display:block;opacity:0.3"></i><div>No ${filterMode==='all'?'':filterMode} transactions</div></div>`;
+    lucide.createIcons(); return;
+  }
+  // Group by date
+  const groups = {};
+  filtered.forEach(t => { (groups[t.date] = groups[t.date]||[]).push(t); });
+  const sorted = Object.keys(groups).sort((a,b)=>b.localeCompare(a));
+  el.innerHTML = sorted.map(d => `
+    <div style="font-size:11px;color:var(--muted);margin:16px 0 6px;text-transform:uppercase;letter-spacing:0.08em">${fmtDate(d)}</div>
+    <div class="card" style="padding:0 16px">${groups[d].map(txHTML).join('')}</div>
+  `).join('');
+  lucide.createIcons();
+}
+
+// ─── INSIGHTS ────────────────────────────────────────────────
+function renderInsights() {
+  const txs = load();
+  const income = txs.filter(t=>t.type==='income').reduce((a,t)=>a+t.amount,0);
+  const expense = txs.filter(t=>t.type==='expense').reduce((a,t)=>a+t.amount,0);
+  const savings = income > 0 ? ((income-expense)/income*100) : 0;
+  const savingsRate = Math.max(0, Math.min(100, savings));
+
+  document.getElementById('savings-rate').textContent = income > 0 ? savingsRate.toFixed(1)+'%' : '—';
+  document.getElementById('savings-bar').style.width = savingsRate + '%';
+
+  // Top categories
+  const bycat = {};
+  txs.filter(t=>t.type==='expense').forEach(t=>{ bycat[t.category]=(bycat[t.category]||0)+t.amount; });
+  const sorted = Object.entries(bycat).sort((a,b)=>b[1]-a[1]);
+  const total = sorted.reduce((a,c)=>a+c[1],0);
+  const topEl = document.getElementById('top-categories');
+  if (!sorted.length) {
+    topEl.innerHTML = `<div style="font-size:13px;color:var(--muted);text-align:center;padding:20px 0">No expense data</div>`;
+  } else {
+    topEl.innerHTML = sorted.slice(0,5).map(([cat,amt]) => {
+      const m = getCat(cat);
+      const pct = total > 0 ? (amt/total*100).toFixed(0) : 0;
+      return `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+            <div style="display:flex;align-items:center;gap:7px;font-size:13px">
+              <span>${m.icon}</span><span>${cat}</span>
+            </div>
+            <div style="font-size:13px;font-weight:600;color:var(--text)">${fmtShort(amt)}</div>
+          </div>
+          <div class="progress-bar">
+            <div class="progress-fill" style="width:${pct}%;background:${m.color}"></div>
+          </div>
+        </div>`;
+    }).join('');
+  }
+
+  // Summary stats
+  const statEl = document.getElementById('summary-stats');
+  const avg = txs.length > 0 ? expense / (txs.filter(t=>t.type==='expense').length || 1) : 0;
+  const biggest = txs.filter(t=>t.type==='expense').sort((a,b)=>b.amount-a.amount)[0];
+  statEl.innerHTML = [
+    ['Total Transactions', txs.length],
+    ['Total Income', fmt(income)],
+    ['Total Expenses', fmt(expense)],
+    ['Net Balance', fmt(income-expense)],
+    ['Avg. Expense', fmt(avg)],
+    ['Biggest Expense', biggest ? fmt(biggest.amount)+' ('+biggest.category+')' : '—'],
+  ].map(([k,v]) => `
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:13px;color:var(--muted)">${k}</span>
+      <span style="font-size:13px;font-weight:600">${v}</span>
+    </div>`).join('');
+}
+
+// ─── TOAST ───────────────────────────────────────────────────
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ─── INIT ─────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Restore theme
+  const savedTheme = localStorage.getItem('fin_theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  document.getElementById('themeBtn').innerHTML = savedTheme === 'dark'
+    ? '<i data-lucide="sun" style="width:16px;height:16px"></i>'
+    : '<i data-lucide="moon" style="width:16px;height:16px"></i>';
+
+  // Default date
+  document.getElementById('f-date').value = new Date().toISOString().split('T')[0];
+
+  lucide.createIcons();
+  renderAll();
+});
+</script>
+</body>
+</html>
+<!--  -->
